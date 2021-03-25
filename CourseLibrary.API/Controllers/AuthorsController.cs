@@ -29,9 +29,10 @@ namespace CourseLibrary.API.Controllers
 
         [HttpGet()] //[HttpGet("api/authors")] no nee because we set [Route("api/authors")] up
         [HttpHead] // head is like get only is not return the body
-        public ActionResult<IEnumerable<AuthorDto>> GetAuthors()
+        public ActionResult<IEnumerable<AuthorDto>> GetAuthors(string mainCategory, string searchQuery)
         {
-            var authorsFromRepo = _courseLibraryRepository.GetAuthors();
+            var authorsFromRepo = _courseLibraryRepository.GetAuthors(mainCategory, searchQuery);
+            
             /*var authors = new List<AuthorDto>();
 
             foreach(var author in authorsFromRepo)
@@ -45,6 +46,8 @@ namespace CourseLibrary.API.Controllers
                 });
 
             }*/
+
+
             return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
         }
 
