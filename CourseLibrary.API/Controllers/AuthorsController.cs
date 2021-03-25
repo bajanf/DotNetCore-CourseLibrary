@@ -1,4 +1,7 @@
-﻿using CourseLibrary.API.Services;
+﻿using AutoMapper;
+using CourseLibrary.API.Helpers;
+using CourseLibrary.API.Models;
+using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -13,19 +16,36 @@ namespace CourseLibrary.API.Controllers
     public class AuthorsController: ControllerBase
     {
         private ICourseLibraryRepository _courseLibraryRepository;
+        private IMapper _mapper;
 
-        public AuthorsController(ICourseLibraryRepository courseLibraryRepository)
+        public AuthorsController(ICourseLibraryRepository courseLibraryRepository, 
+            IMapper mapper)
         {
+           _mapper=mapper??
+                throw new ArgumentNullException(nameof(mapper));
             _courseLibraryRepository = courseLibraryRepository ??
                 throw new ArgumentNullException(nameof(courseLibraryRepository));
         }
 
         [HttpGet()] //[HttpGet("api/authors")] no nee because we set [Route("api/authors")] up
-        public IActionResult GetAuthors()
+        [HttpHead] // head is like get only is not return the body
+        public ActionResult<IEnumerable<AuthorDto>> GetAuthors()
         {
             var authorsFromRepo = _courseLibraryRepository.GetAuthors();
+            /*var authors = new List<AuthorDto>();
 
-            return Ok(authorsFromRepo);
+            foreach(var author in authorsFromRepo)
+            {
+                authors.Add(new AuthorDto()
+                {
+                    Id = author.Id,
+                    Name = $"{author.FirstName} {author.LastName}",
+                    MainCategory = author.MainCategory,
+                    Age = author.DateOfBirth.GetCurrentAge()
+                });
+
+            }*/
+            return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
         }
 
         [HttpGet("{authorId}")]
@@ -36,7 +56,7 @@ namespace CourseLibrary.API.Controllers
             if (authorFromRepo==null)
                 return NotFound();
 
-            return Ok(authorFromRepo);
+            return Ok(_mapper.Map<AuthorDto>(authorFromRepo));
         }
 
 
