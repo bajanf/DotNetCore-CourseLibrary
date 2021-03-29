@@ -3,7 +3,9 @@ using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,11 +26,51 @@ namespace CourseLibrary.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-           services.AddControllers(setupAction =>
-           {
-               setupAction.ReturnHttpNotAcceptable = true;
-               //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
-           }).AddXmlDataContractSerializerFormatters();
+            services.AddControllers(setupAction =>
+            {
+                setupAction.ReturnHttpNotAcceptable = true;
+                //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
+            })
+                 .AddXmlDataContractSerializerFormatters()
+                 .ConfigureApiBehaviorOptions(setupAction =>
+                 {
+                     //create a proble details object
+                     setupAction.InvalidModelStateResponseFactory = context =>
+                     {
+                         var problemDetailsFactory = context.HttpContext.RequestServices
+                         .GetRequiredService<ProblemDetailsFactory>();
+                         var problemDetails = problemDetailsFactory.CreateValidationProblemDetails(
+                             context.HttpContext,
+                             context.ModelState);
+
+                     //add additional info not added by default
+                     problemDetails.Detail = "See the errors fields for details.";
+                         problemDetails.Instance = context.HttpContext.Request.Path;
+
+                     //add status code
+                     var actionExecutionContext = context as Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext;
+                         if ((context.ModelState.ErrorCount > 0) &&
+                             (actionExecutionContext?.ActionArguments.Count ==
+                             context.ActionDescriptor.Parameters.Count))
+                         {
+                             problemDetails.Type = "https://courselibrary.com/modelvalidationproblem";
+                             problemDetails.Status = StatusCodes.Status422UnprocessableEntity;
+                             problemDetails.Title = "One or more validation errors occured.";
+
+                             return new UnprocessableEntityObjectResult(problemDetails)
+                             {
+                                 ContentTypes = { "application/problem+json" }
+                             };
+                         };
+                         problemDetails.Status = StatusCodes.Status400BadRequest;
+                         problemDetails.Title = "One or more validation errors occured.";
+
+                         return new UnprocessableEntityObjectResult(problemDetails)
+                         {
+                             ContentTypes = { "application/problem+json" }
+                         };
+                     };
+                 });
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
