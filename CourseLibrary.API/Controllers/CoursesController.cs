@@ -148,6 +148,24 @@ namespace CourseLibrary.API.Controllers
                 GetRequiredService<IOptions<ApiBehaviorOptions>>();
             return (ActionResult)options.Value.InvalidModelStateResponseFactory(ControllerContext);
         }
+
+        [HttpDelete("{courseId}")]
+        public ActionResult DeleteCourseForAuthor(Guid authorId,Guid courseId)
+        {
+            if (!_courseLibraryRepository.AuthorExists(authorId))
+                return NotFound();
+
+            var courseForAuthorFromRepo = _courseLibraryRepository.GetCourse(authorId, courseId);
+            if (courseForAuthorFromRepo == null)
+                return NotFound();
+
+            _courseLibraryRepository.DeleteCourse(courseForAuthorFromRepo);
+            _courseLibraryRepository.Save();
+
+            return NoContent();
+        }
+
+
     }
 
 
